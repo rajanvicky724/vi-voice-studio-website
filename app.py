@@ -42,7 +42,10 @@ async def tts(
         voice = default_voices.get(lang, "en-US-AriaNeural")
 
     # Ensure rate like "+0%" or "-20%"
-    if not rate.endswith("%"):
+    try:
+        rate_num = int(str(rate).replace("%", "").strip())
+        except ValueError:
+            rate_num = 0
         rate = f"{int(rate):+d}%"
 
     communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate)
@@ -56,3 +59,4 @@ async def tts(
         media_type="audio/mpeg",
         headers={"Content-Disposition": "attachment; filename=podcast.mp3"},
     )
+
