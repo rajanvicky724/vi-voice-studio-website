@@ -154,7 +154,7 @@
             form.append('text', finalText);
             form.append('lang', lang);
             form.append('voice', voice);
-            form.append('rate', document.getElementById('rate').value);  // no "%".
+            form.append('rate', rate);   // NOT `${rate}%`
 
             const btn = document.getElementById('generateBtn');
             btn.disabled = true;
@@ -191,4 +191,5 @@
     </script>
 </body>
 </html>
+
 
