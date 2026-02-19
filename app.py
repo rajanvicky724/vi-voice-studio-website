@@ -28,9 +28,11 @@ async def tts(
     text: str = Form(...),
     lang: str = Form("English"),
     voice: str = Form(""),
-    rate: str = Form("0%"),
+    rate: str = Form("0"),   # raw number from frontend
 ):
-    # Fallback voices per language
+    from pathlib import Path
+    import uuid, os
+
     default_voices = {
         "English": "en-US-AriaNeural",
         "Tamil": "ta-IN-PallaviNeural",
@@ -41,22 +43,36 @@ async def tts(
     if not voice:
         voice = default_voices.get(lang, "en-US-AriaNeural")
 
-    # Ensure rate like "+0%" or "-20%"
+    # ---- NORMALISE RATE: "0" -> "+0%", "10" -> "+10%", "-20" -> "-20%" ----
     try:
         rate_num = int(str(rate).replace("%", "").strip())
-        except ValueError:
-            rate_num = 0
-        rate = f"{int(rate):+d}%"
+    except ValueError:
+        rate_num = 0
+    rate = f"{rate_num:+d}%"
+    # -----------------------------------------------------------------------
+
+    # temp file
+    temp_dir = Path("tmp")
+    temp_dir.mkdir(exist_ok=True)
+    file_id = uuid.uuid4().hex
+    out_path = temp_dir / f"{file_id}.mp3"
 
     communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate)
+    await communicate.save(str(out_path))
 
-    mp3_bytes = io.BytesIO()
-    await communicate.stream(mp3_bytes)  # stream to buffer
-    mp3_bytes.seek(0)
+    def iterfile():
+        with open(out_path, "rb") as f:
+            data = f.read()
+        try:
+            os.remove(out_path)
+        except OSError:
+            pass
+        yield data
 
     return StreamingResponse(
-        mp3_bytes,
+        iterfile(),
         media_type="audio/mpeg",
-        headers={"Content-Disposition": "attachment; filename=podcast.mp3"},
+        headers={"Content-Disposition": 'attachment; filename="podcast.mp3"'},
     )
+
 
